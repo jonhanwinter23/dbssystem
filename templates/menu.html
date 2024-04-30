@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Item Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #categoryForm {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #category {
+            padding: 8px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #menuItemsDiv {
+            display: none;
+            margin-top: 20px;
+        }
+        .sectionTitle {
+            margin-top: 30px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .link {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+              .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .navbar a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+   <div class="navbar">
+        <a href="/add_new_recipe">Add New Recipe</a>
+        <a href="/add_existing_recipe">Add Existing Recipe</a>
+        <a href="/view_database">View Database</a>
+        <a href="/add_new_menu_item">Add New Menu</a>
+        <a href="/update_stock">Update Stock</a>
+        <a href="/menu">View Menu</a>
+    </div>
+    <h1>Menu Item Details</h1>
+
+    <form id="categoryForm">
+        <label for="category">Select a category:</label>
+        <select id="category" name="category">
+            {% for category in categories %}
+            <option value="{{ category[0] }}">{{ category[0] }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <div id="menuItemsDiv">
+        <div class="sectionTitle">Ingredients:</div>
+        <table id="ingredientsTable">
+            <tr>
+                <th>Ingredient</th>
+                <th>Quantity (kg)</th>
+                <th>Quantity (g)</th>
+            </tr>
+        </table>
+
+        <div class="sectionTitle">Cost:</div>
+        <table id="costTable">
+            <tr>
+                <th>Cost (USD)</th>
+            </tr>
+        </table>
+
+        <div class="sectionTitle">Selling Prices:</div>
+        <table id="sellingPricesTable">
+            <tr>
+                <th>Selling Price 75 (%)</th>
+                <th>Selling Price 72 (%)</th>
+                <th>Selling Price 70 (%)</th>
+                <th>Selling Price 65 (%)</th>
+                <th>Selling Price 60 (%)</th>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        document.getElementById("category").addEventListener("change", function() {
+            var category = this.value;
+            fetch('/menu_items', {
+                method: 'POST',
+                body: JSON.stringify({ category: category }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                var menuItemsDiv = document.getElementById("menuItemsDiv");
+                menuItemsDiv.style.display = "block";
+
+                var ingredientsTable = document.getElementById("ingredientsTable");
+                ingredientsTable.innerHTML = "<tr><th>Ingredient</th><th>Quantity (kg)</th><th>Quantity (g)</th></tr>";
+                var costTable = document.getElementById("costTable");
+                costTable.innerHTML = "<tr><th>Cost (USD)</th></tr>";
+                var sellingPricesTable = document.getElementById("sellingPricesTable");
+                sellingPricesTable.innerHTML = "<tr><th>Selling Price 75 (%)</th><th>Selling Price 72 (%)</th><th>Selling Price 70 (%)</th><th>Selling Price 65 (%)</th><th>Selling Price 60 (%)</th></tr>";
+
+                data.menu_items.forEach(function(item) {
+                    var row = "<tr><td><span class='link' onclick='showMenuItemDetails(" + item[0] + ")'>" + item[1] + "</span></td></tr>";
+                    ingredientsTable.innerHTML += row;
+                });
+            });
+        });
+
+        function showMenuItemDetails(itemId) {
+    fetch('/menu_item_details/' + itemId)
+    .then(response => response.json())
+    .then(data => {
+        var ingredientsTable = document.getElementById("ingredientsTable");
+        ingredientsTable.innerHTML = "<tr><th>Ingredient</th><th>Quantity (kg)</th><th>Quantity (g)</th></tr>";
+        var costTable = document.getElementById("costTable");
+        costTable.innerHTML = "<tr><th>Cost (USD)</th></tr>";
+        var sellingPricesTable = document.getElementById("sellingPricesTable");
+        sellingPricesTable.innerHTML = "<tr><th>Selling Price 75 (%)</th><th>Selling Price 72 (%)</th><th>Selling Price 70 (%)</th><th>Selling Price 65 (%)</th><th>Selling Price 60 (%)</th></tr>";
+
+        data.ingredients.forEach(function(ingredient, index) {
+            var row = "<tr><td>" + ingredient + "</td><td>" + data.quantities[index] + "</td><td>" + (data.quantities[index] * 1000) + "</td></tr>";
+            ingredientsTable.innerHTML += row;
+        });
+
+        var costRow = "<tr><td>" + data.item_details[4].toFixed(2) + "</td></tr>"; // Limit to 2 decimal places
+        costTable.innerHTML += costRow;
+
+        var sellingPricesRow = "<tr><td>" + data.item_details[5].toFixed(2) + "</td><td>" + data.item_details[6].toFixed(2) + "</td><td>" + data.item_details[7].toFixed(2) + "</td><td>" + data.item_details[8].toFixed(2) + "</td><td>" + data.item_details[9].toFixed(2) + "</td></tr>"; // Limit to 2 decimal places
+        sellingPricesTable.innerHTML += sellingPricesRow;
+
+        // Add (USD) after each selling price value
+        var sellingPricesCells = sellingPricesTable.querySelectorAll('td');
+        sellingPricesCells.forEach(function(cell) {
+            cell.textContent += ' (USD)';
+        });
+    });
+}
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Stock</title>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .menu-items-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 10px; /* Add spacing between menu items */
+        }
+
+        .menu-item-container {
+            width: 200px;
+            height: 50px;
+            border: 1px solid #ccc;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s; /* Add smooth transition */
+        }
+
+        .menu-item-container:hover {
+            background-color: #f0f0f0; /* Highlight on hover */
+        }
+
+        .selected {
+            background-color: blue;
+            color: white;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-button {
+            padding: 10px 20px; /* Add padding to button */
+            background-color: #007bff; /* Change button color */
+            color: #fff; /* Change text color */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s; /* Add smooth transition */
+        }
+
+        .back-button:hover {
+            background-color: #0056b3; /* Darker color on hover */
+        }
+    </style>
+   <script>
+        function fetchMenuItems() {
+            var selectedCategory = document.getElementById('category').value;
+            fetch('/get_menu_items_for_cost', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    selected_category: selectedCategory
+                }),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                var menuItemsDiv = document.getElementById('menu_items');
+                menuItemsDiv.innerHTML = ''; // Clear the div
+
+                if (data.menu_items) {
+                    data.menu_items.forEach(function(menu_item) {
+                        var menuItemContainer = document.createElement('div');
+                        menuItemContainer.className = 'menu-item-container';
+                        menuItemContainer.textContent = menu_item;
+                        // Add event listener to each menu item container
+                        menuItemContainer.addEventListener('click', function() {
+                            fetchMenuItemDetails(menu_item); // Fetch details when clicked
+                        });
+                        menuItemsDiv.appendChild(menuItemContainer);
+                    });
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function fetchMenuItemDetails(menu_item) {
+            fetch('/get_menu_item_details', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    menu_item: menu_item
+                }),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                var menuItemDetailsDiv = document.getElementById('menu_item_details');
+                menuItemDetailsDiv.innerHTML = '';
+
+                var table = document.createElement('table');
+                var tr = document.createElement('tr');
+                var th1 = document.createElement('th');
+                var th2 = document.createElement('th');
+                th1.textContent = 'Property';
+                th2.textContent = 'Value';
+                tr.appendChild(th1);
+                tr.appendChild(th2);
+                table.appendChild(tr);
+
+                for (var key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        var tr = document.createElement('tr');
+                        var td1 = document.createElement('td');
+                        var td2 = document.createElement('td');
+                        td1.textContent = key;
+                        td2.textContent = data[key];
+                        tr.appendChild(td1);
+                        tr.appendChild(td2);
+                        table.appendChild(tr);
+                    }
+                }
+
+                menuItemDetailsDiv.appendChild(table);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function goBackToRoot() {
+            window.location.href = "/view_cost"; // Adjust the URL to your Flask route
+        }
+    </script>
+</head>
+<body>
+    <div class="header-container">
+        <h2>Update Kitchen Stock</h2>
+        <button class="back-button" onclick="goBackToRoot()">Go Back</button>
+    </div>
+    <form id="categoryForm" method="post" onsubmit="fetchMenuItems(); return false;">
+        <label for="category">Select Category:</label><br>
+        <select id="category" name="category">
+            {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="Show Menu Items">
+    </form>
+
+    <div id="menu_items"></div>
+    <div id="menu_item_details"></div>
+
+</body>
+</html>

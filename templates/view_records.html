@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Records</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.4/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        /* Your CSS styles here */
+        .navbar {
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .navbar a.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #recordsTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        #recordsTable th,
+        #recordsTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        #recordsTable th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation bar -->
+    <div class="navbar">
+        <a href="/add_new_recipe">Add New Recipe</a>
+        <a href="/add_existing_recipe">Add Existing Recipe</a>
+        <a href="/view_database">View Database</a>
+        <a href="/add_new_menu_item">Add New Menu</a>
+        <a href="/update_stock">Update Stock</a>
+        <a href="/menu">View Menu</a>
+    </div>
+
+    <h1>Records</h1>
+    <form id="filterForm">
+        <label for="date">Select Date:</label>
+        <input type="date" id="date" name="date">
+        <button type="submit">Filter</button>
+    </form>
+
+    <table id="recordsTable">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Menu Item Name</th>
+                <th>Quantity</th>
+                <th>Overall Cost</th>
+                 <th>Price per Unit</th>
+
+            </tr>
+        </thead>
+        <tbody id="recordsBody">
+            <!-- Records will be populated dynamically -->
+        </tbody>
+    </table>
+
+    <button id="downloadBtn">Download as Excel</button>
+
+<script>
+ document.getElementById("filterForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+    fetchRecords();
+});
+
+function fetchRecords() {
+    var date = document.getElementById("date").value;
+
+    var url = "/get_records?date=" + date;
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            var recordsBody = document.getElementById("recordsBody");
+            recordsBody.innerHTML = '';
+
+            if (data.length === 0) {
+                // Display a message when no data is available
+                var row = recordsBody.insertRow();
+                var cell = row.insertCell(0);
+                cell.colSpan = 5; // Span all five columns
+                cell.textContent = 'No data available';
+            } else {
+                // Populate the table with records
+                data.forEach(function(record) {
+                    var row = recordsBody.insertRow();
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+                    var cell3 = row.insertCell(2);
+                    var cell4 = row.insertCell(3); // Added cell for Quantity
+                    var cell5 = row.insertCell(4); // Added cell for Price per Unit
+
+                    cell1.textContent = record.timestamp;
+                    cell2.textContent = record.menu_item_name;
+                    cell3.textContent = record.quantity; // Display Quantity
+                    cell4.textContent = record.overall_cost + " USD"; // Display Overall Cost with USD
+                    // Calculate and display the Price per Unit
+                    var pricePerUnit = record.overall_cost / record.quantity;
+                    cell5.textContent = pricePerUnit.toFixed(2) + " USD"; // Display Price per Unit with USD and 2 decimal places
+                });
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+fetchRecords(); // Fetch records initially on page load
+
+// Function to download table as Excel with data on a new sheet
+document.getElementById("downloadBtn").addEventListener("click", function() {
+    var wb = XLSX.utils.book_new(); // Create a new workbook
+    var ws = XLSX.utils.table_to_sheet(document.getElementById("recordsTable"), {sheet:"Records"}); // Convert table to sheet
+
+    XLSX.utils.book_append_sheet(wb, ws, "Records"); // Append the sheet to the workbook
+
+    // Convert workbook to binary Excel file
+    var wbout = XLSX.write(wb, {bookType:'xlsx', type:'binary'});
+
+    // Save the binary Excel file
+    function s2ab(s) {
+        var buf = new ArrayBuffer(s.length);
+        var view = new Uint8Array(buf);
+        for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+        return buf;
+    }
+
+    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), 'records.xlsx');
+});
+</script>
+
+</body>
+</html>
