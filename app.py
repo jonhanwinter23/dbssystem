@@ -6,6 +6,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+app.secret_key = 'super secret key'
+app.config['SESSION_TYPE'] = 'filesystem'
+
 
 # Define the upload folder
 UPLOAD_FOLDER = 'uploads'
@@ -139,24 +142,52 @@ def add_existing_recipe():
         conn.close()
         return render_template('add_existing_recipe.html', recipe_names=recipe_names)
 
-# View database route
+# # View database route
+# @app.route('/view_database', methods=['GET', 'POST'])
+# def view_database():
+#     conn = sqlite3.connect('kitchen.db')
+#     c = conn.cursor()
+
+#     if request.method == 'POST':
+#         selected_category = request.form['category']
+#         c.execute("SELECT * FROM recipes WHERE category=?", (selected_category,))
+#         recipes = c.fetchall()
+#     else:
+#         c.execute("SELECT * FROM recipes")
+#         recipes = c.fetchall()
+
+#     categories = c.execute("SELECT DISTINCT category FROM recipes").fetchall()
+
+#     conn.close()
+#     return render_template('view_database.html', recipes=recipes, categories=categories)
+
 @app.route('/view_database', methods=['GET', 'POST'])
 def view_database():
-    conn = sqlite3.connect('kitchen.db')
-    c = conn.cursor()
+    try:
+        conn = sqlite3.connect('kitchen.db')
+        c = conn.cursor()
 
-    if request.method == 'POST':
-        selected_category = request.form['category']
-        c.execute("SELECT * FROM recipes WHERE category=?", (selected_category,))
-        recipes = c.fetchall()
-    else:
-        c.execute("SELECT * FROM recipes")
-        recipes = c.fetchall()
+        if request.method == 'POST':
+            selected_category = request.form['category']
+            c.execute("SELECT * FROM recipes WHERE category=?", (selected_category,))
+            recipes = c.fetchall()
+        else:
+            c.execute("SELECT * FROM recipes")
+            recipes = c.fetchall()
 
-    categories = c.execute("SELECT DISTINCT category FROM recipes").fetchall()
+        categories = c.execute("SELECT DISTINCT category FROM recipes").fetchall()
 
-    conn.close()
-    return render_template('view_database.html', recipes=recipes, categories=categories)
+        conn.close()
+        return render_template('view_database.html', recipes=recipes, categories=categories)
+
+    except sqlite3.Error as e:
+        error_message = f"SQLite error: {e}"
+        print(error_message)  # Log the error for debugging
+        return f"An error occurred: {error_message}", 500  # Return a specific error message and HTTP status code
+    except Exception as e:
+        error_message = f"An unexpected error occurred: {str(e)}"
+        print(error_message)  # Log the error for debugging
+        return f"An unexpected error occurred", 500  # Return a generic error message and HTTP status code
 
 # Delete recipe route
 @app.route('/delete_recipe/<name>', methods=['POST'])
